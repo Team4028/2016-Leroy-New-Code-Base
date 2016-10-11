@@ -1,0 +1,4 @@
+eclipse.preferences.version=1
+org.eclipse.jdt.core.classpathVariable.NetworkTables-sources=C\:/Users/4028-Write/wpilib/java/current/lib/NetworkTables-sources.jar
+org.eclipse.jdt.core.classpathVariable.WPILib-sources=C\:/Users/4028-Write/wpilib/java/current/lib/WPILib-sources.jar
+org.eclipse.jdt.core.classpathVariable.navx-frc=C\:/Users/4028-Write/navx-mxp/java/lib/navx_frc.jar
