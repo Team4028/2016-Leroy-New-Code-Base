@@ -33,6 +33,7 @@ import org.usfirst.frc.team6204.robot.subsystems.DriversStation.DriversStationIn
 import org.usfirst.frc.team6204.robot.subsystems.DynamicCameraServer;
 import org.usfirst.frc.team6204.robot.subsystems.Infeed;
 import org.usfirst.frc.team6204.robot.subsystems.Infeed.INFEED_TILT_POSITION_REENTRANT;
+import org.usfirst.frc.team6204.robot.subsystems.Infeed.INFEED_TILT_POSITION_TARGET;
 //import org.usfirst.frc.team6204.robot.subsystems._Kicker;
 //import org.usfirst.frc.team6204.robot.subsystems._NavigationSensor;
 import org.usfirst.frc.team6204.robot.subsystems.Puma;
@@ -326,6 +327,10 @@ public class Robot extends IterativeRobot
     	// Shift to LOW gear
     	_chassis.ShiftGear(RobotMap.SHIFTER_LOW_GEAR);
     	
+    	
+    	// Set buzz start time for gamepad
+    	_driversStation.setBuzzStartTime();
+    	
     	// =================
     	// pumas
     	// =================
@@ -368,6 +373,10 @@ public class Robot extends IterativeRobot
     	_driversStation.ReadCurrentScanCycleValues();
     	
     	// =====================================
+    	// Step 1.1: Buzz the Gamepad at the start of teleop to ensure driver and operator have correct controllers
+    	_driversStation.BuzzDriverGamepad();
+    	
+    	// =====================================
     	// Step 2.1: Handle everything about PUMA
     	//				(3 toggle buttons)
     	// =====================================
@@ -393,38 +402,26 @@ public class Robot extends IterativeRobot
     	// ========
     	if(_driversStation.getIsInfeedTiltAxisZeroBtnJustPressed() || _infeed.getIsInfeedTiltZeroStillRunning())
     	{
-    		// finish zeroing started in Telop Init
-    		_infeed.CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.ZERO);
-    		_infeed.ZeroInfeedTiltAxisReentrant(); 		
+    		_infeed.MoveInfeedToTargetPosition(INFEED_TILT_POSITION_TARGET.ZERO);	
     	}
     	else if(_driversStation.getIsOnlyInfeedTiltDeployBtnJustPressed() || _infeed.getIsInfeedTiltDeployStillRunning())
     	{
-    		// move to deployed (down) position
-    		DriverStation.reportError("Moving to Infeed Deploy Position", false);
-    		DriverStation.reportError("Is Infeed Shoot Still Running: " + Boolean.toString(_infeed.getIsInfeedTiltShootStillRunning()), false);
-    		_infeed.CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.DEPLOY);
-    		_infeed.MoveInfeedTiltAxisToDeployedPositionReentrant();
+    		_infeed.MoveInfeedToTargetPosition(INFEED_TILT_POSITION_TARGET.DEPLOY);
     	}
     	else if((_driversStation.getIsOnlyInfeedTiltShootBtnJustPressed()
     			&& ((_infeed.getInfeedTiltTargetPosition() == Infeed.INFEED_TILT_AXIS_DEPLOYED_POSITION_IN_ROTATIONS)
     					|| (_infeed.getInfeedTiltTargetPosition() == Infeed.INFEED_TILT_AXIS_CHEVAL_POSITION_IN_ROTATIONS)))
     			|| _infeed.getIsInfeedTiltShootStillRunning())
     	{
-    		// move to shooting position ONLY if infeed is currently in Acquire or Cheval position
-			DriverStation.reportError("Moving to Infeed Shoot Position", false);
-			DriverStation.reportError("Is Infeed Shoot Still Running: " + Boolean.toString(_infeed.getIsInfeedTiltShootStillRunning()), false);
-			_infeed.CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.SHOOT);
-			_infeed.MoveInfeedTiltAxisToShootingPositionReentrant();
+    		_infeed.MoveInfeedToTargetPosition(INFEED_TILT_POSITION_TARGET.SHOOT);
     	}
     	else if(_driversStation.getIsOnlyInfeedTiltChevalBtnJustPressed() || _infeed.getIsInfeedTiltChevalStillRunning())
     	{
-    		_infeed.CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.CHEVAL);
-    		_infeed.MoveInfeedTiltAxisToChevalPositionReentrant();
+    		_infeed.MoveInfeedToTargetPosition(INFEED_TILT_POSITION_TARGET.CHEVAL);
     	}
     	else if(_driversStation.getIsOnlyInfeedTiltCrossDefenseBtnJustPressed() || _infeed.getIsInfeedTiltCrossDefenseStillRunning())
     	{
-    		_infeed.CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.CROSS_DEFENSE);
-    		_infeed.MoveInfeedTiltAxisToCrossDefensePositionReentrant();
+    		_infeed.MoveInfeedToTargetPosition(INFEED_TILT_POSITION_TARGET.CROSS_DEFENSE);
     	}
     	else if(_driversStation.getIsOnlyInfeedTiltThrottlePressed())
     	{

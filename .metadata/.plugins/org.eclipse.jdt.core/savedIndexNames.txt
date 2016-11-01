@@ -1,0 +1,24 @@
+INDEX VERSION 1.127+C:\Users\4028-Write\Documents\GitHub\2016-Leroy-Code-New-Code-Base\.metadata\.plugins\org.eclipse.jdt.core
+604390567.index
+2528020881.index
+3524662672.index
+129449821.index
+286217041.index
+2671045963.index
+4089353016.index
+565102271.index
+2851524012.index
+1848009914.index
+1681516525.index
+3306367843.index
+152699204.index
+462786078.index
+2085746493.index
+979068901.index
+2235551016.index
+742974785.index
+2053797313.index
+737875853.index
+1126381264.index
+941362126.index
+1075865446.index

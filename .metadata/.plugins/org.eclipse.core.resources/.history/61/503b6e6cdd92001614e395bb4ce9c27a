@@ -1,0 +1,554 @@
+package org.usfirst.frc.team6204.robot;
+
+import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.IterativeRobot;
+import edu.wpi.first.wpilibj.SerialPort;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.TimeZone;
+
+import org.usfirst.frc.team6204.robot.constants.RobotMap;
+import org.usfirst.frc.team6204.robot.subsystemSequences.ShootBall;
+//import org.usfirst.frc.team6204.robot.subsystems._And1Defense;
+import org.usfirst.frc.team6204.robot.autonRoutines.CrossDefense;
+import org.usfirst.frc.team6204.robot.autonRoutines.DoNothing;
+import org.usfirst.frc.team6204.robot.autonRoutines.DriveForwardAuton;
+import org.usfirst.frc.team6204.robot.autonRoutines.ZeroAllAxis;
+import org.usfirst.frc.team6204.robot.constants.AutonConstants;
+import org.usfirst.frc.team6204.robot.subsystems.Chassis;
+//import org.usfirst.frc.team6204.robot.subsystems._Cupid;
+import org.usfirst.frc.team6204.robot.subsystems.DriversStation;
+import org.usfirst.frc.team6204.robot.subsystems.DriversStation.DriversStationInputs;
+import org.usfirst.frc.team6204.robot.subsystems.DynamicCameraServer;
+import org.usfirst.frc.team6204.robot.subsystems.Infeed;
+import org.usfirst.frc.team6204.robot.subsystems.Infeed.INFEED_TILT_POSITION_REENTRANT;
+//import org.usfirst.frc.team6204.robot.subsystems._Kicker;
+//import org.usfirst.frc.team6204.robot.subsystems._NavigationSensor;
+import org.usfirst.frc.team6204.robot.subsystems.Puma;
+import org.usfirst.frc.team6204.robot.subsystems.Shooter;
+//import org.usfirst.frc.team6204.robot.subsystems._Slider;
+//import org.usfirst.frc.team6204.robot.subsystems._Turret;
+//import org.usfirst.frc.team6204.robot.subsystems._Winch;
+//import org.usfirst.frc.team6204.subsystemSequences.ShootBall;
+//import org.usfirst.frc.team6204.subsystemSequences.ShootBall.SHOOT_BALL_STATE;
+import org.usfirst.frc.team6204.robot.constants.AutonConstants.Auton_Cross_Defense_Type;
+import org.usfirst.frc.team6204.robot.constants.AutonConstants.Auton_Drive_Throttle_Percent;
+import org.usfirst.frc.team6204.robot.constants.AutonConstants.Auton_Drive_Time_In_Secs;
+import org.usfirst.frc.team6204.robot.constants.AutonConstants.Auton_Infeed_Tilt_Position;
+import org.usfirst.frc.team6204.robot.constants.AutonConstants.Auton_Mode;
+import org.usfirst.frc.team6204.robot.constants.AutonConstants.Auton_Pumas_Position;
+import org.usfirst.frc.team6204.robot.constants.AutonConstants.Auton_Shoot_Ball;
+
+//import com.kauailabs.navx.frc.AHRS;
+
+/**
+ * The VM is configured to automatically run this class, and to call the
+ * functions corresponding to each mode, as described in the IterativeRobot
+ * documentation. If you change the name of this class or the package after
+ * creating this project, you must also update the manifest file in the resource
+ * directory.
+ */
+public class Robot extends IterativeRobot 
+{
+	// ===========================================================
+	//   Define class level instance variables for Robot Runtime controllable objects  
+	// ===========================================================
+	//private And1Defense _and1Defense;
+	private Chassis _chassis;
+	//private Cupid _cupid;
+	private DriversStation _driversStation;
+	private Infeed _infeed;
+	//private Kicker _kicker;
+	private Puma _puma;
+	private Shooter _shooter;
+	//private Slider _slider;
+	//private Turret _turret;
+	//private Winch _winch;
+	
+	private ShootBall _shootBall;
+	
+	private DynamicCameraServer _roboRioCameraServer;
+	//private NavigationSensor _navXSensor;
+	
+	private DoNothing _doNothing;
+	private ZeroAllAxis _zeroAllAxis;
+	private DriveForwardAuton _driveForwardAuton;
+	private CrossDefense _crossDefense;
+	
+    /**
+     * This function is run when the robot is first started up and should be
+     * used for any initialization code.
+     */
+    public void robotInit() 
+    {
+        //===================
+    	// write jar (build) date & time to the dashboard
+        //===================
+    	Utilities.WriteBuildInfoToDashboard();
+    	
+    	//====================================================
+    	// create instances of all of the Robot SubSystems
+    	//====================================================   	
+    	_driversStation = new  DriversStation(RobotMap.DRIVER_GAMEPAD_USB_PORT, 
+    											RobotMap.OPERATOR_GAMEPAD_USB_PORT);
+
+    	_chassis = new  Chassis(RobotMap.LEFT_DRIVE_MASTER_MTR_TALON_CAN_ADDR,
+    							RobotMap.LEFT_DRIVE_SLAVE_1_MTR_TALON_CAN_ADDR,
+    							RobotMap.LEFT_DRIVE_SLAVE_2_MTR_TALON_CAN_ADDR,
+    							RobotMap.RIGHT_DRIVE_MASTER_MTR_TALON_CAN_ADDR,
+    							RobotMap.RIGHT_DRIVE_SLAVE_1_MTR_TALON_CAN_ADDR,
+    							RobotMap.RIGHT_DRIVE_SLAVE_2_MTR_TALON_CAN_ADDR, 
+    							RobotMap.PCM_CAN_ADDR,
+    							RobotMap.SHIFTER_SOLENOID_EXTEND_PCM_PORT,
+    							RobotMap.SHIFTER_SOLENOID_RETRACT_PCM_PORT);
+    	
+    	_puma = new Puma(RobotMap.PCM_CAN_ADDR, 
+							RobotMap.PUMA_FRONT_SOLENOID_EXTEND_PCM_PORT, 
+							RobotMap.PUMA_FRONT_SOLENOID_RETRACT_PCM_PORT,
+							RobotMap.PUMA_BACK_SOLENOID_EXTEND_PCM_PORT, 
+							RobotMap.PUMA_BACK_SOLENOID_RETRACT_PCM_PORT);
+    	
+    	_infeed = new Infeed(RobotMap.INFEED_TILT_MTR_TALON_CAN_ADDR,
+								RobotMap.INFEED_ACQ_MTR_PWM_PORT,
+								RobotMap.BALL_IN_POSITION_LIMIT_SWITCH_DIO_PORT);
+    		
+    	_shooter = new Shooter(RobotMap.SHOOTER_LEFT_MTR_PWM_PORT, 
+    							RobotMap.SHOOTER_RIGHT_MTR_PWM_PORT);	
+    	
+    	//_cupid = new Cupid(RobotMap.CUPID_SERVO_PWM_PORT);
+    	
+    	//_and1Defense = new And1Defense(RobotMap.AND1_SERVO_PWM_PORT);
+    	
+    	//_slider = new  Slider(RobotMap.SLIDER_TALON_CAN_ADDR);
+    	
+    	//_turret = new Turret(RobotMap.TURRET_TALON_CAN_ADDR,
+    	//    					RobotMap.TURRET_APPROACHING_HOME_LIMIT_SWITCH_DIO_PORT,
+    	//   					RobotMap.TURRET_HOME_LIMIT_SWITCH_DIO_PORT);
+    	
+    	//_winch = new Winch(RobotMap.SCALING_MTR_PWM_PORT);
+    	
+    	//_kicker = new Kicker(RobotMap.KICKER_MTR_PWM_PORT);
+    	
+    	// Create instances of all subsystem sequences
+    	_shootBall = new ShootBall(_infeed, _shooter);
+    	
+    	
+    	//===================
+    	// connect to Nav Sensor
+    	//===================
+    	//_navXSensor = new NavigationSensor(SerialPort.Port.kMXP);
+    	
+    	//===================
+    	// connect to RoboRio Cameras
+    	//	fyi: the camera name (ex "cam0") can be found through the roborio web interface
+    	//===================
+    	_roboRioCameraServer = DynamicCameraServer.getInstance();
+    	_roboRioCameraServer.setQuality(25);
+        _roboRioCameraServer.startAutomaticCapture(RobotMap.INFEED_ARM_CAMERA);
+    }
+
+    /*
+     *****************************************************************************************************
+     * This function is called 1x each time the robot enters anton mode
+     *  (setup the initial robot state for auton mode)
+     *****************************************************************************************************
+     */
+    public void autonomousInit() 
+    {
+    	// =====================================
+    	// Step 1: Get the DASHBOARD Input values for the current scan cycle
+    	// =====================================
+    	_driversStation.ReadCurrentScanCycleValues();
+    	
+    	// ========================================
+    	// Setup default state to start Auton Mode
+    	// ========================================
+    	// =================
+    	// driving
+    	// =================
+    	// Enable/disable accel/decel
+    	_chassis.setAccDecModeEnabled(false);
+    	
+    	// Stop driving
+    	_chassis.StopDriveMotors();
+    	
+    	// Zero drive encoders
+    	_chassis.ZeroLeftDriveAxisEncoderPosition();
+    	_chassis.ZeroRightDriveAxisEncoderPosition();
+    	
+    	// Set speed scaling to 100%
+    	_chassis.setDriveSpeedScalingFactor(1.0);
+    	
+    	// Shift to LOW gear
+    	_chassis.ShiftGear(RobotMap.SHIFTER_LOW_GEAR);
+    	
+    	// =================
+    	// pumas
+    	// =================
+    	//Set both pumas to be down
+    	_puma.ChgPumaFrontPosition(RobotMap.PUMA_FRONT_DOWN_POSITION);
+    	_puma.ChgPumaBackPosition(RobotMap.PUMA_BACK_DOWN_POSITION);
+    	
+    	// =================
+    	// infeed
+    	// =================
+    	if(!_infeed.IsInfeedTiltAxisZeroedYet())
+    	{
+	    	// zero the infeed tilt axis (fyi this may be the same physical location as the stored position)
+			_infeed.ZeroInfeedTiltAxisReentrant();
+    	}
+    	else
+    	{
+    		_infeed.MoveInfeedTiltAxisToCrossDefensePositionReentrant();
+    	}
+		
+		// stop infeed acquire rollers
+		_infeed.StopInfeedAquireMotor();
+		
+    	// =================
+    	// shooter
+    	// =================
+		_shooter.StopShooterMotors();
+		
+		// =================
+    	// get user input values from the Smart Dashboard
+		// =================
+		
+		Auton_Mode autonMode = _driversStation.getAutonModeRequested();
+		Auton_Pumas_Position autonPumaPosition = _driversStation.getAutonPumasPositionRequested();
+		Auton_Infeed_Tilt_Position autonInfeedTiltPosition = _driversStation.getAutonInfeedTiltPositionRequested();
+		Auton_Drive_Throttle_Percent autonFwdThrottlePercent = _driversStation.getAutonFwdDriveThrottlePercentRequested();
+		Auton_Drive_Time_In_Secs autonFwdDriveTimeInSecs = _driversStation.getAutonFwdDriveTimeInSecsRequested();
+		Auton_Drive_Throttle_Percent autonRevThrottlePercent = _driversStation.getAutonRevDriveThrottlePercentRequested();
+		Auton_Drive_Time_In_Secs autonRevDriveTimeInSecs = _driversStation.getAutonRevDriveTimeInSecsRequested();
+		Auton_Shoot_Ball autonShootBall = _driversStation.getAutonShootBallRequested();
+		//Auton_Cross_Defense_Type autonCrossDefenseType = _driversStation.getAutonCrossDefenseTypeRequested();
+		
+
+    	// write out the selected Auton Mode
+    	DriverStation.reportError("AutonModeRequested: [" + _driversStation.getAutonModeRequested().toString() + "]", false);
+    	
+    	switch(autonMode)
+    	{
+    		case UNDEFINED:
+    			break;
+    			
+    		case DO_NOTHING:
+    			_doNothing = new DoNothing();
+    			break;
+    			
+    		case ZERO_ALL_AXIS:
+    			_zeroAllAxis = new ZeroAllAxis(_infeed);
+    			break;
+    			
+    		case DRIVE_FWD:
+    			_driveForwardAuton = new DriveForwardAuton(_infeed, _chassis, _puma, _shootBall, autonFwdThrottlePercent, autonFwdDriveTimeInSecs, 
+    												autonRevThrottlePercent, autonRevDriveTimeInSecs, autonPumaPosition, autonInfeedTiltPosition, 
+    												autonShootBall);
+    			break;
+    		/*	
+    		case CROSS_DEFENSE:
+    			_crossDefense = new CrossDefense(_infeed, _chassis, _puma, autonCrossDefenseType);
+    			break;
+    		*/
+    	}
+    }
+
+    /*
+     * *****************************************************************************************************
+     * This function is called periodically during autonomous
+     * *****************************************************************************************************
+     */
+    public void autonomousPeriodic() 
+    {
+    	switch(_driversStation.getAutonModeRequested())
+    	{
+    		case UNDEFINED:
+    			break;
+    			
+    		case DO_NOTHING:
+    			_doNothing.Execute();
+    			break;
+    			
+    		case ZERO_ALL_AXIS:
+    			_zeroAllAxis.Execute();
+    			break;
+    			
+    		case DRIVE_FWD:
+    			_driveForwardAuton.Execute();
+    			break;
+    			
+    		case CROSS_DEFENSE:
+    			_crossDefense.Execute();
+    			break;
+    	}
+    }
+
+    /*
+     *****************************************************************************************************
+     * This function is called 1x each time the robot enters tele-operated mode
+     *  (setup the initial robot state for telop mode)
+     *****************************************************************************************************
+     */
+    public void teleopInit()
+    {
+    	// ========================================
+    	// Setup default state to start Telop Mode
+    	// ========================================
+    	
+    	// =================
+    	// driving
+    	// =================
+    	// Enable/disable accel/decel
+    	_chassis.setAccDecModeEnabled(false);
+    	
+    	// Stop driving
+    	_chassis.StopDriveMotors();
+    	
+    	// Zero drive encoders
+    	_chassis.ZeroLeftDriveAxisEncoderPosition();
+    	_chassis.ZeroRightDriveAxisEncoderPosition();
+    	
+    	// Set speed scaling to 100%
+    	_chassis.setDriveSpeedScalingFactor(1.0);
+    	
+    	// Shift to LOW gear
+    	_chassis.ShiftGear(RobotMap.SHIFTER_LOW_GEAR);
+    	
+    	
+    	// Set buzz start time for gamepad
+    	_driversStation.setBuzzStartTime();
+    	
+    	// =================
+    	// pumas
+    	// =================
+    	//Set both pumas to be down
+    	_puma.ChgPumaFrontPosition(RobotMap.PUMA_FRONT_DOWN_POSITION);
+    	_puma.ChgPumaBackPosition(RobotMap.PUMA_BACK_DOWN_POSITION);
+    	
+    	// =================
+    	// infeed
+    	// =================
+    	if(!_infeed.IsInfeedTiltAxisZeroedYet())
+    	{
+	    	// zero the infeed tilt axis (fyi this may be the same physical location as the stored position)
+			_infeed.ZeroInfeedTiltAxisReentrant();
+    	}
+    	else
+    	{
+    		_infeed.MoveInfeedTiltAxisToCrossDefensePositionReentrant();
+    	}
+		
+		// stop infeed acquire rollers
+		_infeed.StopInfeedAquireMotor();
+		
+    	// =================
+    	// shooter
+    	// =================
+		_shooter.StopShooterMotors();
+    }
+    
+    /*
+     * ****************************************************************************************************
+     * This function is called periodically during telop (operator) mode
+     * ****************************************************************************************************
+     */
+    public void teleopPeriodic() 
+    {
+    	// =====================================
+    	// Step 1: Get the DASHBOARD Input values for the current scan cycle
+    	// =====================================
+    	_driversStation.ReadCurrentScanCycleValues();
+    	
+    	// =====================================
+    	// Step 1.1: Buzz the Gamepad at the start of teleop to ensure driver and operator have correct controllers
+    	_driversStation.BuzzDriverGamepad();
+    	
+    	// =====================================
+    	// Step 2.1: Handle everything about PUMA
+    	//				(3 toggle buttons)
+    	// =====================================
+    	if(_driversStation.getIsPumaFrontToggleBtnJustPressed())
+    	{
+    		_puma.ToggleFrontPumaPosition();
+    	}
+    	else if(_driversStation.getIsPumaBackToggleBtnJustPressed())
+    	{
+    		_puma.ToggleBackPumaPosition();
+    	}
+    	else if(_driversStation.getIsPumaBothToggleBtnJustPressed())
+    	{
+    		_puma.ToggleBothPumasPosition();
+    	}
+    	
+    	// =====================================
+    	// Step 2.2: Handle everything about INFEED 
+    	// =====================================
+    	
+    	// ========
+    	//	Step 2.2.1: Tilt :  	(2 toggle Buttons, 2 triggers)
+    	// ========
+    	if(_driversStation.getIsInfeedTiltAxisZeroBtnJustPressed() || _infeed.getIsInfeedTiltZeroStillRunning())
+    	{
+    		// finish zeroing started in Telop Init
+    		_infeed.CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.ZERO);
+    		_infeed.ZeroInfeedTiltAxisReentrant(); 		
+    	}
+    	else if(_driversStation.getIsOnlyInfeedTiltDeployBtnJustPressed() || _infeed.getIsInfeedTiltDeployStillRunning())
+    	{
+    		// move to deployed (down) position
+    		DriverStation.reportError("Moving to Infeed Deploy Position", false);
+    		DriverStation.reportError("Is Infeed Shoot Still Running: " + Boolean.toString(_infeed.getIsInfeedTiltShootStillRunning()), false);
+    		_infeed.CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.DEPLOY);
+    		_infeed.MoveInfeedTiltAxisToDeployedPositionReentrant();
+    	}
+    	else if((_driversStation.getIsOnlyInfeedTiltShootBtnJustPressed()
+    			&& ((_infeed.getInfeedTiltTargetPosition() == Infeed.INFEED_TILT_AXIS_DEPLOYED_POSITION_IN_ROTATIONS)
+    					|| (_infeed.getInfeedTiltTargetPosition() == Infeed.INFEED_TILT_AXIS_CHEVAL_POSITION_IN_ROTATIONS)))
+    			|| _infeed.getIsInfeedTiltShootStillRunning())
+    	{
+    		// move to shooting position ONLY if infeed is currently in Acquire or Cheval position
+			DriverStation.reportError("Moving to Infeed Shoot Position", false);
+			DriverStation.reportError("Is Infeed Shoot Still Running: " + Boolean.toString(_infeed.getIsInfeedTiltShootStillRunning()), false);
+			_infeed.CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.SHOOT);
+			_infeed.MoveInfeedTiltAxisToShootingPositionReentrant();
+    	}
+    	else if(_driversStation.getIsOnlyInfeedTiltChevalBtnJustPressed() || _infeed.getIsInfeedTiltChevalStillRunning())
+    	{
+    		_infeed.CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.CHEVAL);
+    		_infeed.MoveInfeedTiltAxisToChevalPositionReentrant();
+    	}
+    	else if(_driversStation.getIsOnlyInfeedTiltCrossDefenseBtnJustPressed() || _infeed.getIsInfeedTiltCrossDefenseStillRunning())
+    	{
+    		_infeed.CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.CROSS_DEFENSE);
+    		_infeed.MoveInfeedTiltAxisToCrossDefensePositionReentrant();
+    	}
+    	else if(_driversStation.getIsOnlyInfeedTiltThrottlePressed())
+    	{
+    		// analog mode move axis
+    		_infeed.RunInfeedTiltMotor(_driversStation.getInfeedTiltRawVelocityCmd());
+    	}
+
+    	// ========
+    	//	Step 2.2.2: Acquire: 	(2 bumpers
+    	// ========
+    	
+    	// Complete sequence for infeeding
+    	if (_driversStation.getIsAcquireBtnPressed())
+    	{	
+    		//Run Shooter motors in at full
+    		_shooter.RunShooterMotors(1.0);
+    		//Set infeed speed to constant (70% for now)
+    		_infeed.RunInfeedAcquireMotor(-0.7);
+    	}
+    	else if (_driversStation.getIsReleaseBtnJustPressed() || _shootBall.getIsShootBallStillRunning())
+    	{
+			_shootBall.Execute();
+			//DriverStation.reportError("Running Shooting Sequence", false);
+    	}
+    	else
+    	{
+    		_shooter.RunShooterMotors(_driversStation.getShooterRawVelocityCmd());
+    		// Runs the infeed ONLY at an adjustable speed
+        	_infeed.RunInfeedAcquireMotor(_driversStation.getInfeedAcquireVelocityCmd());
+    	}
+    	
+    	// ========
+    	//	Step 2.2.3: Ball In Position Switch
+    	// ========
+    	if (_infeed.getIsBallInPosition())
+    	{
+    		//DriverStation.reportError("Ball in position", false);
+    	}
+    	
+    	// ========
+    	//	Step 2.2.4: Tilt Home Limit Switch
+    	// ========
+    	if (_infeed.getIsTiltAxisAtHomePosition())
+    	{
+    		//DriverStation.reportError("Infeed Tilt Axis at home position", false);
+    	}
+    	
+    	// ========
+    	//	Step 2.3: Change Camera
+    	// ========
+    	if (_driversStation.getIsCameraToggleBtnJustPressed())
+    	{
+    		DriverStation.reportError("Swapping Camera", false);
+    		_roboRioCameraServer.swapCamera();
+    	}
+    	
+    	/* Sequence for shooting:
+    	 * Simultaenously acquire at full for x ms (1/4 sec ?) and move infeed to shooting position (or keep it deployed if you want ball released slowly)
+    	 * Spin shooter wheels to 100% outwards
+    	 * Cut Infeed
+    	 * Spin infeed 100% out
+    	 */
+    	
+    	// =====================================
+    	// Step 2.4: Handle everything about DRIVING
+    	//				(2 joysticks + & -)
+    	// =====================================
+    	// Gear Shift Toggle Button
+    	if(_driversStation.getIsShifterToggleBtnJustPressed())
+    	{
+    		_chassis.ToggleGear();	
+    	}
+    	
+    	// Acc/Dec  Mode Toggle Button
+    	if(_driversStation.getIsAccDecModeToggleBtnJustPressed())
+    	{
+    		_chassis.ToggleAccDecMode();
+    	}
+    	
+    	// Turn speed scaling toggle
+    	if(_driversStation.getIsTurnSpeedBtnJustPressed())
+    	{
+    		_chassis.ToggleTurnSpeedScaling();
+    	}
+    	
+    	// Speed Scaling Buttons
+    	if(_driversStation.getIsOnlyScaleDriveSpeedUpBtnJustPressed())
+    	{
+    		// scale up
+    		_chassis.setDriveSpeedScalingFactor(1.0);
+    	}
+    	else if(_driversStation.getIsOnlyScaleDriveSpeedDownBtnJustPressed())
+    	{
+    		// scale down
+    		_chassis.setDriveSpeedScalingFactor(0.8);
+    	}
+  
+    	// Throttle & Turn cmds
+    	_chassis.RunDriveMotors(_driversStation.getArcadeDriveRawThrottleCmd(), _driversStation.getArcadeDriveRawTurnCmd());
+    	
+    	// =====================================
+    	// Step 2.5: Update Dashboard
+    	// =====================================
+    	_driversStation.UpdateDashboard();
+    }
+    
+    /**
+     * This function is called periodically during test mode
+     */
+    public void testPeriodic() 
+    {
+    	
+    }  
+    
+    public void disabledPeriodic()
+    {
+    	//DriverStation.reportWarning("Exiting Periodic Scanning Mode!", false);
+    }
+}

@@ -9,6 +9,8 @@ import edu.wpi.first.wpilibj.VictorSP;
 import edu.wpi.first.wpilibj.CANTalon.FeedbackDevice;
 
 import org.usfirst.frc.team6204.robot.Utilities;
+import org.usfirst.frc.team6204.robot.subsystems.Infeed.INFEED_TILT_POSITION_REENTRANT;
+import org.usfirst.frc.team6204.robot.subsystems.DriversStation;
 
 /**
  * This class defines the behavior of the Infeed subsystem
@@ -45,6 +47,16 @@ public class Infeed
 	}
 	
 	public enum INFEED_TILT_POSITION_REENTRANT
+	{
+		UNDEFINED,
+		ZERO,
+		DEPLOY,
+		SHOOT,
+		CROSS_DEFENSE,
+		CHEVAL
+	}
+	
+	public enum INFEED_TILT_POSITION_TARGET
 	{
 		UNDEFINED,
 		ZERO,
@@ -451,6 +463,43 @@ public class Infeed
 		}
 
 		DriverStation.reportError(debugMsg, false);
+	}
+	
+	public void MoveInfeedToTargetPosition(INFEED_TILT_POSITION_TARGET infeedTiltPositionTarget)
+	{
+		switch (infeedTiltPositionTarget)
+		{
+			case ZERO:
+	    		CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.ZERO);
+	    		ZeroInfeedTiltAxisReentrant(); 		
+	    		break;
+	    	
+			case DEPLOY:
+	    		// move to deployed (down) position
+	    		DriverStation.reportError("Moving to Infeed Deploy Position", false);
+	    		DriverStation.reportError("Is Infeed Shoot Still Running: " + Boolean.toString(getIsInfeedTiltShootStillRunning()), false);
+	    		CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.DEPLOY);
+	    		MoveInfeedTiltAxisToDeployedPositionReentrant();
+	    		break;
+	    		
+			case SHOOT:
+	    		// move to shooting position ONLY if infeed is currently in Acquire or Cheval position
+				DriverStation.reportError("Moving to Infeed Shoot Position", false);
+				DriverStation.reportError("Is Infeed Shoot Still Running: " + Boolean.toString(getIsInfeedTiltShootStillRunning()), false);
+				CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.SHOOT);
+				MoveInfeedTiltAxisToShootingPositionReentrant();
+				break;
+				
+			case CHEVAL:
+	    		CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.CHEVAL);
+	    		MoveInfeedTiltAxisToChevalPositionReentrant();
+	    		break;
+	    		
+			case CROSS_DEFENSE:
+	    		CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT.CROSS_DEFENSE);
+	    		MoveInfeedTiltAxisToCrossDefensePositionReentrant();
+	    		break;
+		}
 	}
 	
 	public void CancelAllReentrantMethodsBut(INFEED_TILT_POSITION_REENTRANT infeedTiltPositionReentrant)

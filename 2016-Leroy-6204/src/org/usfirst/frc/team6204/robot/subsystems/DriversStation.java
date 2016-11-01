@@ -1,5 +1,7 @@
 package org.usfirst.frc.team6204.robot.subsystems;
 
+import java.util.Date;
+
 import org.usfirst.frc.team6204.robot.constants.AutonConstants;
 import org.usfirst.frc.team6204.robot.constants.AutonConstants.Auton_Mode;
 import org.usfirst.frc.team6204.robot.constants.AutonConstants.Auton_Cross_Defense_Type;
@@ -12,6 +14,7 @@ import org.usfirst.frc.team6204.robot.constants.LogitechF310;
 import org.usfirst.frc.team6204.robot.constants.RobotMap;
 
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.Joystick.RumbleType;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -41,10 +44,14 @@ public class DriversStation
 	private SendableChooser _autonDriveRevThrottleChooser;
 	private SendableChooser _autonShootBallChooser;
 	//private SendableChooser _autonCrossDefenseTypeChooser;
+	
+	public long _driverGamepadBuzzStartTime;
 
 	private final double INFEED_TILT_TRIGGER_THRESHHOLD = 0.05;
 	private final double INFEED_ACQUIRE_TRIGGER_THRESHOLD = 0.05;
 	private final double SHOOTER_JOYSTICK_THRESHHOLD = 0.05;
+	
+	private final double DRIVER_GAMEPAD_BUZZ_TIME_IN_MS = 5000;
 	
 	/**
 	 * Create a new instance of the Driver's Station
@@ -76,6 +83,24 @@ public class DriversStation
 	//{
 	//	return _previousValues;
 	//}
+	
+	public void setBuzzStartTime()
+	{
+		_driverGamepadBuzzStartTime = new Date().getTime();
+	}
+	
+	public void BuzzDriverGamepad()
+	{
+		long buzzElapsedTime = (new Date().getTime() - _driverGamepadBuzzStartTime);
+				
+		while (buzzElapsedTime < DRIVER_GAMEPAD_BUZZ_TIME_IN_MS)
+		{
+			if (_driverGamepad.getIsXbox() == true) 
+			{
+				_driverGamepad.setRumble(RumbleType.kLeftRumble, (float) 0.9);
+			}
+		}
+	}
 	
 	public void UpdateDashboard()
     {
